@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Heart, ShoppingCart } from "lucide-react";
+import { Check, Eye, Heart, ShoppingCart } from "lucide-react";
 import type { Product } from "@/lib/data";
 import { formatKES, percentOff } from "@/lib/utils";
 import { useCartStore } from "@/lib/store/cart";
@@ -11,17 +11,22 @@ import { useWishlistStore } from "@/lib/store/wishlist";
 import { blurFor } from "@/lib/blur-map";
 import { toast } from "./Toast";
 import Stars from "./Stars";
+import QuickViewModal from "./QuickViewModal";
 
 /**
  * Product card with:
- *  - subtle 3D perspective tilt (vanilla-tilt, max 6°, glare off,
- *    pointer-fine devices only)
- *  - image zoom to 1.04 + shadow lift on hover
- *  - wishlist heart toggle (top-right)
- *  - add-to-cart that springs the navbar badge
+ *  - subtle 3D perspective tilt (vanilla-tilt, max 6°, glare off)
+ *  - image zoom to 1.05 + smooth shadow lift on hover
+ *  - animated wishlist heart pop & particle effect
+ *  - Quick View trigger with rich modal
+ *  - add-to-cart button with checkmark micro-interaction
  */
 export default function ProductCard({ product }: { product: Product }) {
   const cardRef = useRef<HTMLDivElement>(null);
+  const [showQuickView, setShowQuickView] = useState(false);
+  const [justAdded, setJustAdded] = useState(false);
+  const [heartPopping, setHeartPopping] = useState(false);
+
   const add = useCartStore((s) => s.add);
   const wishlisted = useWishlistStore((s) => s.slugs.includes(product.slug));
   const toggleWishlist = useWishlistStore((s) => s.toggle);
@@ -39,9 +44,9 @@ export default function ProductCard({ product }: { product: Product }) {
     import("vanilla-tilt").then(({ default: VanillaTilt }) => {
       if (cancelled || !el.isConnected) return;
       VanillaTilt.init(el, {
-        max: 6, // brief: max-tilt 6 degrees
+        max: 6,
         speed: 500,
-        glare: false, // brief: glare disabled
+        glare: false,
         "max-glare": 0,
         scale: 1.01,
       });
@@ -56,7 +61,9 @@ export default function ProductCard({ product }: { product: Product }) {
   const price = product.dealPrice ?? product.price;
   const off = percentOff(product.price, product.dealPrice);
 
-  const onAdd = () => {
+  const onAdd = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     add({
       slug: product.slug,
       name: product.name,
@@ -64,59 +71,123 @@ export default function ProductCard({ product }: { product: Product }) {
       image: product.image,
       price,
     });
-    toast(`${product.name} added to your basket`);
+    setJustAdded(true);
+    toast({
+      message: `${product.name} added to your basket`,
+      image: product.image,
+    });
+    setTimeout(() => setJustAdded(false), 1600);
   };
 
-  const onWishlist = () => {
+  const onWishlist = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     toggleWishlist(product.slug);
-    toast(wishlisted ? `${product.name} removed from wishlist` : `${product.name} saved to wishlist`);
+    setHeartPopping(true);
+    setTimeout(() => setHeartPopping(false), 500);
+    toast({
+      message: wishlisted
+        ? `${product.name} removed from wishlist`
+        : `${product.name} saved to wishlist`,
+      image: product.image,
+    });
   };
 
   return (
-    <div className="product-card" ref={cardRef}>
-      <Link href={`/products/${product.slug}`} className="pc-img-link" aria-label={product.name}>
-        <Image
-          src={product.image}
-          alt={product.name}
-          fill
-          sizes="(max-width: 420px) 92vw, (max-width: 768px) 46vw, (max-width: 1200px) 30vw, 292px"
-          className="pc-img"
-          placeholder="blur"
-          blurDataURL={blurFor(product.image)}
-        />
-        {off > 0 && <span className="fm-chip fm-chip--sale pc-chip">-{off}%</span>}
-        {product.isNew && off === 0 && <span className="fm-chip fm-chip--new pc-chip">New</span>}
-      </Link>
+    <>
+      <div className="product-card" ref={cardRef}>
+        <div className="pc-img-wrap">
+          <Link href={`/products/${product.slug}`} className="pc-img-link" aria-label={product.name}>
+            <Image
+              src={product.image}
+              alt={product.name}
+              fill
+              sizes="(max-width: 420px) 92vw, (max-width: 768px) 46vw, (max-width: 1200px) 30vw, 292px"
+              className="pc-img"
+              placeholder="blur"
+              blurDataURL={blurFor(product.image)}
+              loading="lazy"
+            />
+            {off > 0 && <span className="fm-chip fm-chip--sale pc-chip">-{off}%</span>}
+            {product.isNew && off === 0 && <span className="fm-chip fm-chip--new pc-chip">New</span>}
+          </Link>
 
-      <button
-        type="button"
-        className={`pc-heart ${wishlisted ? "is-active" : ""}`}
-        aria-label={wishlisted ? `Remove ${product.name} from wishlist` : `Add ${product.name} to wishlist`}
-        aria-pressed={wishlisted}
-        onClick={onWishlist}
-      >
-        <Heart fill={wishlisted ? "currentColor" : "none"} />
-      </button>
+          {/* Quick actions overlay */}
+          <div className="pc-floating-actions">
+            <button
+              type="button"
+              className={`pc-icon-action pc-heart ${wishlisted ? "is-active" : ""} ${
+                heartPopping ? "is-popping" : ""
+              }`}
+              aria-label={
+                wishlisted
+                  ? `Remove ${product.name} from wishlist`
+                  : `Add ${product.name} to wishlist`
+              }
+              aria-pressed={wishlisted}
+              onClick={onWishlist}
+            >
+              <Heart fill={wishlisted ? "currentColor" : "none"} size={17} />
+            </button>
 
-      <div className="pc-body">
-        <Link href={`/products/${product.slug}`} className="pc-name">
-          {product.name}
-        </Link>
-        <span className="pc-unit">
-          {product.unit} · <Stars rating={product.rating} size={11} />
-        </span>
-        <span className={`pc-stock ${product.stock === "in" ? "pc-stock--in" : "pc-stock--low"}`}>
-          <span className="dot" />
-          {product.stock === "in" ? "In Stock" : "Low Stock"}
-        </span>
-        <div className="pc-pricing">
-          <span className="pc-price">{formatKES(price)}</span>
-          {off > 0 && <span className="pc-was">{formatKES(product.price)}</span>}
+            <button
+              type="button"
+              className="pc-icon-action pc-quickview"
+              aria-label={`Quick view ${product.name}`}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setShowQuickView(true);
+              }}
+            >
+              <Eye size={17} />
+              <span className="pc-action-tip">Quick View</span>
+            </button>
+          </div>
         </div>
-        <button type="button" className="btn btn-brand btn-sm btn-block" onClick={onAdd}>
-          <ShoppingCart size={15} /> Add to Cart
-        </button>
+
+        <div className="pc-body">
+          <Link href={`/products/${product.slug}`} className="pc-name">
+            {product.name}
+          </Link>
+          <div className="pc-unit">
+            <span>{product.unit}</span>
+            <span className="pc-dot-sep">·</span>
+            <Stars rating={product.rating} size={11} />
+          </div>
+          <span className={`pc-stock ${product.stock === "in" ? "pc-stock--in" : "pc-stock--low"}`}>
+            <span className="dot" />
+            {product.stock === "in" ? "In Stock" : "Low Stock"}
+          </span>
+          <div className="pc-pricing">
+            <span className="pc-price">{formatKES(price)}</span>
+            {off > 0 && <span className="pc-was">{formatKES(product.price)}</span>}
+          </div>
+          <button
+            type="button"
+            className={`btn btn-brand btn-sm btn-block pc-add-btn ${justAdded ? "is-added" : ""}`}
+            onClick={onAdd}
+            aria-label={`Add ${product.name} to cart`}
+          >
+            {justAdded ? (
+              <>
+                <Check size={15} /> Added ✓
+              </>
+            ) : (
+              <>
+                <ShoppingCart size={15} /> Add to Cart
+              </>
+            )}
+          </button>
+        </div>
       </div>
-    </div>
+
+      {showQuickView && (
+        <QuickViewModal
+          product={product}
+          onClose={() => setShowQuickView(false)}
+        />
+      )}
+    </>
   );
 }

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { Check, Repeat, X } from "lucide-react";
+import { Calendar, Check, Repeat, Sparkles, X } from "lucide-react";
 import Modal from "./Modal";
 import { bundles } from "@/lib/data";
 import { formatKES } from "@/lib/utils";
@@ -10,7 +10,7 @@ import { blurFor } from "@/lib/blur-map";
 import { WHATSAPP_HELP_URL } from "@/lib/utils";
 import { WhatsAppIcon } from "./BrandIcons";
 
-/** Weekly subscription bundles — /api/subscribe saves + notifies on WhatsApp. */
+/** Weekly subscription bundles with instant modal sign-up & WhatsApp sync. */
 export default function BundlesSection() {
   const [modalBundle, setModalBundle] = useState<string | null>(null);
   const [form, setForm] = useState({ name: "", phone: "", address: "", day: "Monday" });
@@ -45,9 +45,14 @@ export default function BundlesSection() {
                 alt={b.name}
                 fill
                 sizes="(max-width: 991px) 92vw, 380px"
+                className="fm-bundle-img-element"
                 placeholder="blur"
                 blurDataURL={blurFor(b.image)}
+                loading="lazy"
               />
+              <span className="fm-bundle-badge">
+                <Sparkles size={12} /> {b.saves}
+              </span>
             </div>
             <div className="bundle-body">
               <h3 className="bundle-name">{b.name}</h3>
@@ -59,10 +64,12 @@ export default function BundlesSection() {
                   </li>
                 ))}
               </ul>
-              <span className="bundle-saves">{b.saves}</span>
               <div className="bundle-price-row">
-                <span className="bundle-price">{formatKES(b.price)}</span>
-                <span className="bundle-cadence">per week · pause or cancel any time</span>
+                <div>
+                  <span className="bundle-price">{formatKES(b.price)}</span>
+                  <span className="bundle-cadence"> / week</span>
+                </div>
+                <span className="bundle-sub-tag">Pause any time</span>
               </div>
               <button
                 type="button"
@@ -85,27 +92,32 @@ export default function BundlesSection() {
         title={bundle ? `Subscribe — ${bundle.name}` : ""}
       >
         {status === "done" ? (
-          <div style={{ textAlign: "center", padding: "12px 4px" }}>
-            <Check
-              size={44}
-              style={{ color: "var(--fm-brand)", margin: "0 auto 14px", display: "block" }}
-            />
-            <h3 style={{ marginBottom: 8 }}>You’re subscribed! 🧺</h3>
-            <p style={{ fontSize: 14 }}>
-              Your <strong>{bundle?.name}</strong> arrives every week. We’ve sent the details to
-              FreshMart on WhatsApp and saved your subscription.
+          <div style={{ textAlign: "center", padding: "16px 8px" }}>
+            <div className="fm-sub-success-icon">
+              <Check size={36} />
+            </div>
+            <h3 style={{ marginBottom: 8, fontSize: 20 }}>You’re Subscribed! 🧺</h3>
+            <p style={{ fontSize: 14, color: "var(--fm-body)" }}>
+              Your <strong>{bundle?.name}</strong> arrives every <strong>{form.day}</strong>. We’ve sent the details to
+              FreshMart dispatch on WhatsApp.
             </p>
-            <a className="btn btn-brand btn-block" style={{ marginTop: 16 }} href={WHATSAPP_HELP_URL} target="_blank" rel="noopener noreferrer">
-              <WhatsAppIcon size={15} /> Message FreshMart on WhatsApp
+            <a
+              className="btn btn-brand btn-block"
+              style={{ marginTop: 20 }}
+              href={WHATSAPP_HELP_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <WhatsAppIcon size={16} /> Open WhatsApp Confirmation
             </a>
           </div>
         ) : (
-          <form onSubmit={submit}>
-            <p style={{ fontSize: 14, color: "var(--fm-muted)", marginTop: 0 }}>
-              {bundle?.name} — {bundle ? formatKES(bundle.price) : ""} weekly. Pause or cancel any time.
+          <form onSubmit={submit} className="fm-sub-form">
+            <p style={{ fontSize: 14, color: "var(--fm-muted)", marginTop: 0, borderBottom: "1px solid var(--fm-line)", paddingBottom: 12 }}>
+              {bundle?.name} — <strong>{bundle ? formatKES(bundle.price) : ""}</strong> weekly. Pause, skip a week, or cancel anytime with one WhatsApp message.
             </p>
             <div className="fm-field">
-              <label htmlFor="sub-name">Full name</label>
+              <label htmlFor="sub-name">Full Name *</label>
               <input
                 id="sub-name"
                 required
@@ -115,7 +127,7 @@ export default function BundlesSection() {
               />
             </div>
             <div className="fm-field">
-              <label htmlFor="sub-phone">Phone (M-Pesa number)</label>
+              <label htmlFor="sub-phone">Phone Number (M-Pesa) *</label>
               <input
                 id="sub-phone"
                 required
@@ -127,21 +139,24 @@ export default function BundlesSection() {
               />
             </div>
             <div className="fm-field">
-              <label htmlFor="sub-address">Delivery address</label>
+              <label htmlFor="sub-address">Delivery Address (Nairobi) *</label>
               <input
                 id="sub-address"
                 required
                 value={form.address}
                 onChange={(e) => setForm({ ...form, address: e.target.value })}
-                placeholder="Estate, road, house / floor"
+                placeholder="Estate, building, house / floor number"
               />
             </div>
             <div className="fm-field">
-              <label htmlFor="sub-day">Weekly delivery day</label>
+              <label htmlFor="sub-day">
+                <Calendar size={13} style={{ verticalAlign: -2, marginRight: 4 }} />
+                Weekly Delivery Day *
+              </label>
               <select id="sub-day" value={form.day} onChange={(e) => setForm({ ...form, day: e.target.value })}>
                 {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map((d) => (
                   <option key={d} value={d}>
-                    {d}
+                    Every {d} Morning
                   </option>
                 ))}
               </select>
@@ -151,8 +166,8 @@ export default function BundlesSection() {
                 Something went wrong — please try again or WhatsApp us.
               </p>
             )}
-            <button type="submit" className="btn btn-brand btn-block" disabled={status === "sending"}>
-              {status === "sending" ? "Subscribing…" : "Confirm Weekly Subscription"}
+            <button type="submit" className="btn btn-brand btn-block" disabled={status === "sending"} style={{ marginTop: 12 }}>
+              {status === "sending" ? "Confirming subscription…" : "Confirm Weekly Subscription"}
             </button>
           </form>
         )}

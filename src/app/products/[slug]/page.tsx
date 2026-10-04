@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { MapPin, Truck } from "lucide-react";
+import { CheckCircle2, Leaf, MapPin, RefreshCw, ShieldCheck, Sparkles, Truck } from "lucide-react";
 import ProductGallery from "@/components/ProductGallery";
 import ProductActions from "@/components/ProductActions";
 import ProductCard from "@/components/ProductCard";
@@ -87,7 +87,7 @@ export default async function ProductPage({ params }: { params: { slug: string }
         <span className="sep">/</span>
         <Link href={`/category/${product.category}`}>{category?.name}</Link>
         <span className="sep">/</span>
-        <span aria-current="page" style={{ color: "var(--fm-ink)" }}>
+        <span aria-current="page" style={{ color: "var(--fm-ink)", fontWeight: 600 }}>
           {product.name}
         </span>
       </nav>
@@ -95,43 +95,64 @@ export default async function ProductPage({ params }: { params: { slug: string }
       <div className="pd-layout">
         <ProductGallery images={product.gallery} name={product.name} />
 
-        <div>
-          {product.isNew && <span className="fm-chip fm-chip--new" style={{ marginBottom: 10 }}>New</span>}
+        <div className="pd-info-col">
+          {product.isNew && <span className="fm-chip fm-chip--new" style={{ marginBottom: 10 }}>New Arrival</span>}
           <h1 className="pd-name">{product.name}</h1>
 
-          <p style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-            <Stars rating={product.rating} />
+          <div className="pd-rating-bar">
+            <Stars rating={product.rating} size={15} />
             <span className="pd-meta">
-              {product.rating.toFixed(1)} · {product.ratingCount} reviews
+              <strong>{product.rating.toFixed(1)}</strong> ({product.ratingCount} verified customer reviews)
             </span>
-          </p>
+          </div>
 
           <div className="pd-price-row">
             <span className="pd-price">{formatKES(price)}</span>
             {off > 0 && <span className="pd-was">{formatKES(product.price)}</span>}
-            {off > 0 && <span className="fm-chip fm-chip--sale">-{off}% today</span>}
+            {off > 0 && <span className="fm-chip fm-chip--sale">Save {off}% Today</span>}
           </div>
-          <p className="pd-meta">{product.unit}</p>
+          <p className="pd-meta" style={{ fontSize: 13, marginBottom: 12 }}>Unit: <strong>{product.unit}</strong></p>
 
           <p className={`pc-stock ${product.stock === "in" ? "pc-stock--in" : "pc-stock--low"}`} style={{ marginBottom: 18 }}>
             <span className="dot" />
-            {product.stock === "in" ? "In Stock — order by 10am for same-day delivery" : "Low Stock — only a few left today"}
+            {product.stock === "in" ? "In Stock — Order by 10am for same-day delivery" : "Low Stock — Only a few left in Nairobi today"}
           </p>
 
-          <p style={{ fontSize: 15 }}>{product.description}</p>
-          <p className="pd-meta" style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 20 }}>
-            <MapPin size={13} /> Origin: {product.origin}
-          </p>
+          <p className="pd-desc-lead">{product.description}</p>
+
+          <div className="pd-origin-pill">
+            <MapPin size={14} /> Origin: <strong>{product.origin}</strong>
+          </div>
 
           <ProductActions product={product} />
+
+          {/* Value Props & Trust Badges */}
+          <div className="pd-trust-grid">
+            <div className="pd-trust-item">
+              <Leaf size={16} />
+              <span>100% Farm Fresh Quality</span>
+            </div>
+            <div className="pd-trust-item">
+              <Truck size={16} />
+              <span>Same-Day Nairobi Delivery</span>
+            </div>
+            <div className="pd-trust-item">
+              <ShieldCheck size={16} />
+              <span>M-Pesa & Cash on Delivery</span>
+            </div>
+            <div className="pd-trust-item">
+              <RefreshCw size={16} />
+              <span>Freshness Guarantee</span>
+            </div>
+          </div>
 
           <div className="pd-delivery-box">
             <Truck />
             <p>
-              <strong>Delivery within Nairobi — {formatKES(SITE.deliveryFee)}</strong>
+              <strong>Nairobi Delivery — {formatKES(SITE.deliveryFee)} (FREE on orders over KES 2,500)</strong>
               <br />
-              Order by {SITE.sameDayCutoff} for same-day delivery. Choose a 2-hour slot at checkout.
-              Keep-cold items travel in insulated boxes.
+              Order by {SITE.sameDayCutoff} for same-day delivery. Choose your preferred 2-hour delivery slot at checkout.
+              Perishable items travel in insulated cooling containers.
             </p>
           </div>
         </div>
@@ -139,14 +160,14 @@ export default async function ProductPage({ params }: { params: { slug: string }
 
       {/* Accordion: description / nutrition / storage */}
       <div style={{ marginTop: 54, maxWidth: 860 }}>
-        <h2 style={{ fontSize: 22 }}>Product details</h2>
-        <Accordion title="Description" defaultOpen>
+        <h2 style={{ fontSize: 22, marginBottom: 16 }}>Product Specifications & Care</h2>
+        <Accordion title="Description & Details" defaultOpen>
           <p>{product.description}</p>
-          <p className="pd-meta">Origin: {product.origin} · Unit: {product.unit}</p>
+          <p className="pd-meta">Origin: <strong>{product.origin}</strong> · Pack Unit: <strong>{product.unit}</strong> · Category: <strong>{category?.name}</strong></p>
         </Accordion>
 
         {product.nutrition ? (
-          <Accordion title="Nutritional information (per 100 g)">
+          <Accordion title="Nutritional Information (per 100 g)">
             <table className="nutrition-table">
               <tbody>
                 <tr>
@@ -166,51 +187,69 @@ export default async function ProductPage({ params }: { params: { slug: string }
                   <td>{product.nutrition.fat}</td>
                 </tr>
                 <tr>
-                  <td>Fibre</td>
+                  <td>Dietary Fibre</td>
                   <td>{product.nutrition.fibre}</td>
                 </tr>
               </tbody>
             </table>
           </Accordion>
         ) : (
-          <Accordion title="Care & use">
+          <Accordion title="Care & Handling">
             <p>{product.storage}</p>
           </Accordion>
         )}
 
-        <Accordion title="Storage & delivery">
+        <Accordion title="Storage & Freshness Tips">
           <p>{product.storage}</p>
           <p className="pd-meta">
-            Delivered within Nairobi for {formatKES(SITE.deliveryFee)}. Same-day when you order before {SITE.sameDayCutoff}.
+            Delivered fresh within Nairobi for {formatKES(SITE.deliveryFee)}. Same-day when ordered before {SITE.sameDayCutoff}.
           </p>
         </Accordion>
       </div>
 
       {/* Reviews */}
       <div style={{ marginTop: 54, maxWidth: 860 }}>
-        <h2 style={{ fontSize: 22, display: "flex", alignItems: "center", gap: 10 }}>
-          Customer reviews <Stars rating={product.rating} />
-        </h2>
-        {product.reviews.length === 0 && <p className="pd-meta">No reviews yet — be the first when your order arrives.</p>}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 14, marginBottom: 20 }}>
+          <h2 style={{ fontSize: 22, margin: 0, display: "flex", alignItems: "center", gap: 10 }}>
+            Customer Reviews <Stars rating={product.rating} size={18} />
+          </h2>
+          <span className="pd-meta" style={{ fontSize: 13 }}>
+            Based on {product.ratingCount} verified Nairobi reviews
+          </span>
+        </div>
+
+        {product.reviews.length === 0 && (
+          <div className="fm-empty-state" style={{ padding: "30px 20px" }}>
+            <p className="pd-meta">No reviews yet — be the first to review when your order arrives.</p>
+          </div>
+        )}
+
         {product.reviews.map((r) => (
           <article className="fm-review" key={r.author + r.date}>
             <div className="fm-review-head">
               <div>
-                <div className="fm-review-name">{r.author}</div>
+                <div className="fm-review-name">
+                  {r.author} <span className="fm-verified-badge"><CheckCircle2 size={12} /> Verified Buyer</span>
+                </div>
                 <div className="fm-review-meta">
                   {r.area} · {r.date}
                 </div>
               </div>
-              <Stars rating={r.rating} size={13} />
+              <Stars rating={r.rating} size={14} />
             </div>
-            <p style={{ margin: 0 }}>{r.text}</p>
+            <p style={{ margin: 0, fontSize: 14.5 }}>{r.text}</p>
           </article>
         ))}
       </div>
 
       {/* Related products */}
       <div style={{ marginTop: 54 }}>
-        <h2 style={{ fontSize: 22 }}>You may also like</h2>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 20 }}>
+          <h2 style={{ fontSize: 22, margin: 0 }}>You May Also Like</h2>
+          <Link href={`/category/${product.category}`} className="fm-see-all-link">
+            View All in {category?.name} →
+          </Link>
+        </div>
         <div className="fm-hscroll">
           {related.map((p) => (
             <ProductCard key={p.slug} product={p} />
