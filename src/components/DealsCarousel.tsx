@@ -1,8 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ShoppingCart } from "lucide-react";
+import { Check, ShoppingCart } from "lucide-react";
 import Marquee from "./Marquee";
 import { getDeals } from "@/lib/data";
 import { formatKES, percentOff } from "@/lib/utils";
@@ -11,9 +12,28 @@ import { blurFor } from "@/lib/blur-map";
 import { toast } from "./Toast";
 
 function DealCard({ product }: { product: ReturnType<typeof getDeals>[number] }) {
+  const [justAdded, setJustAdded] = useState(false);
   const add = useCartStore((s) => s.add);
   const price = product.dealPrice ?? product.price;
   const off = percentOff(product.price, product.dealPrice);
+
+  const onAdd = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    add({
+      slug: product.slug,
+      name: product.name,
+      unit: product.unit,
+      image: product.image,
+      price,
+    });
+    setJustAdded(true);
+    toast({
+      message: `${product.name} added at deal price!`,
+      image: product.image,
+    });
+    setTimeout(() => setJustAdded(false), 1600);
+  };
 
   return (
     <article className="deal-card">
@@ -23,10 +43,12 @@ function DealCard({ product }: { product: ReturnType<typeof getDeals>[number] })
           alt={product.name}
           fill
           sizes="264px"
+          className="fm-deal-img-element"
           placeholder="blur"
           blurDataURL={blurFor(product.image)}
+          loading="lazy"
         />
-        <span className="fm-chip fm-chip--sale deal-off">-{off}% off</span>
+        <span className="fm-chip fm-chip--sale deal-off">-{off}% OFF</span>
       </Link>
       <div className="deal-body">
         <h3 className="deal-name">
@@ -39,30 +61,29 @@ function DealCard({ product }: { product: ReturnType<typeof getDeals>[number] })
         </div>
         <button
           type="button"
-          className="btn btn-brand btn-sm btn-block"
-          onClick={() => {
-            add({
-              slug: product.slug,
-              name: product.name,
-              unit: product.unit,
-              image: product.image,
-              price,
-            });
-            toast(`${product.name} added — deal price applied`);
-          }}
+          className={`btn btn-brand btn-sm btn-block pc-add-btn ${justAdded ? "is-added" : ""}`}
+          onClick={onAdd}
         >
-          <ShoppingCart size={14} /> Add to Cart
+          {justAdded ? (
+            <>
+              <Check size={14} /> Added ✓
+            </>
+          ) : (
+            <>
+              <ShoppingCart size={14} /> Add to Cart
+            </>
+          )}
         </button>
       </div>
     </article>
   );
 }
 
-/** Auto-scrolling deals strip — pauses on hover and touch. */
+/** Auto-scrolling deals strip with pause on hover/touch & instant add-to-cart. */
 export default function DealsCarousel() {
   const deals = getDeals();
   return (
-    <Marquee duration={42} aria-label="Today's deals">
+    <Marquee duration={40} aria-label="Today's deals">
       {deals.map((p) => (
         <DealCard key={p.slug} product={p} />
       ))}
